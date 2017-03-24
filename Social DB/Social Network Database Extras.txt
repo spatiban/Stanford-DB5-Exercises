@@ -1,0 +1,67 @@
+database text type: SQLLITE
+database name:social.db
+
+Q1) For every situation where student A likes student B, but student B likes a different student C, return the names and grades of A, B, and C. 
+
+Ans) select H1.name, H1.grade, H2.name, H2.grade, H3.name, H3.grade
+from Likes L1, Likes L2, Highschooler H1, Highschooler H2, Highschooler H3
+where L1.ID2 = L2.ID1
+and L2.ID2 <> L1.ID1
+and L1.ID1 = H1.ID and L1.ID2 = H2.ID and L2.ID2 = H3.ID;
+
+Q2) Find those students for whom all of their friends are in different grades from themselves. Return the students' names and grades. 
+
+Ans) select name, grade
+from Highschooler, (
+  select ID1 from Friend
+  except
+  -- students who have friends with same grade
+  select distinct Friend.ID1
+  from Friend, Highschooler H1, Highschooler H2
+  where Friend.ID1 = H1.ID and Friend.ID2 = H2.ID
+  and H1.grade = H2.grade
+) as Sample
+where Highschooler.ID = Sample.ID1;
+
+Q3) What is the average number of friends per student? (Your result should be just one number.) 
+
+Ans) select avg(count)
+from (
+  select count(ID2) as count
+  from Friend
+  group by ID1
+) as FriendCount;
+
+Q4) Find the number of students who are either friends with Cassandra or are friends of friends of Cassandra. Do not count Cassandra, even though technically she is a friend of a friend. 
+
+Ans) select count(distinct Fr1.ID2) + count(distinct Fr2.ID2)
+from Friend Fr1, Friend Fr2, Highschooler
+where Highschooler.name = 'Cassandra'
+and Highschooler.ID = Fr1.ID1
+-- reach friends of friends
+and Fr1.ID2 = Fr2.ID1
+-- except herself
+and Fr2.ID1 <> Highschooler.ID
+and Fr2.ID2 <> Highschooler.ID;
+
+Q5) Find the name and grade of the student(s) with the greatest number of friends. 
+
+Ans) select name, grade
+from Highschooler, (
+  select ID1 from Friend
+  except
+  -- student who has someone with more friends than them
+  select distinct (FC1.ID1)
+  from (
+    select ID1, count(ID2) as FriendCount
+    from Friend
+    group by ID1
+  ) as FC1,
+  (
+    select ID1, count(ID2) as FriendCount
+    from Friend
+    group by ID1
+  ) as FC2
+  where FC1.FriendCount < FC2.FriendCount
+) as MaxFriend
+where MaxFriend.ID1 = Highschooler.ID;
